@@ -1,38 +1,90 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// Configuração da Cena 3D com Three.js
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, (window.innerWidth - 300) / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth - 300, window.innerHeight);
 document.getElementById('3d-container').appendChild(renderer.domElement);
 
-// Controles de Órbita para Navegação
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.1;
 controls.screenSpacePanning = false;
 
-// Luzes
 const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
 scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
 directionalLight.position.set(10, 20, 10).normalize();
 scene.add(directionalLight);
 
-// Função para criar uma estrutura de prateleira
+const rows = 4;
+const cols = 4;
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let selectedItemInfo = document.getElementById('item-info');
+
+// Função para criar um item de estoque com dados personalizados
+function createItem(color, type, quantity) {
+  const geometry = new THREE.BoxGeometry(1, 1, 1);
+  const material = new THREE.MeshBasicMaterial({ color });
+  const item = new THREE.Mesh(geometry, material);
+
+  // Adiciona dados ao item para exibir ao ser clicado
+  item.userData = { isStockItem: true, type, quantity };
+  return item;
+}
+
+// Função para criar uma camada de prateleira com itens
+function createShelfLayer(width, height, depth, yPosition) {
+  const layerGroup = new THREE.Group();
+  const layerGeometry = new THREE.BoxGeometry(width, 0.1, depth);
+  const layerMaterial = new THREE.MeshBasicMaterial({ color: 0x8B4513 });
+  const layer = new THREE.Mesh(layerGeometry, layerMaterial);
+  layer.position.y = yPosition;
+  layerGroup.add(layer);
+
+  for (let k = -1; k <= 1; k++) {
+    const quantity = Math.floor(Math.random() * 10) + 1;
+    const item = createItem(0x00ff00, `Item ${String.fromCharCode(65 + Math.floor(Math.random() * 3))}`, quantity);
+    item.position.set(k * 1.5, yPosition + 0.5, 0);
+    layerGroup.add(item);
+  }
+
+  return layerGroup;
+}
+
+// Detecta cliques para selecionar itens
+function onMouseClick(event) {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(scene.children, true);
+
+  if (intersects.length > 0) {
+    const selectedObject = intersects[0].object;
+    if (selectedObject.userData.isStockItem) {
+      const { type, quantity } = selectedObject.userData;
+      selectedItemInfo.innerText = `Tipo: ${type}, Quantidade: ${quantity}`;
+    } else {
+      selectedItemInfo.innerText = "Nenhum item selecionado";
+    }
+  }
+}
+
+// Adiciona evento de clique
+window.addEventListener('click', onMouseClick);
+
+// Função para criar estrutura de prateleira
 function createShelfStructure() {
   const shelfGroup = new THREE.Group();
   const shelfHeight = 1.5;
   const shelfWidth = 5;
   const shelfDepth = 2;
 
-  // Estruturas verticais das prateleiras (simulando barras de suporte)
   const supportGeometry = new THREE.BoxGeometry(0.2, shelfHeight * 6, 0.2);
   const supportMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
-
-  // Adicionar quatro barras verticais em cada canto da prateleira
   const supportPositions = [
     [-shelfWidth / 2, shelfHeight * 1.5, -shelfDepth / 2],
     [shelfWidth / 2, shelfHeight * 1.5, -shelfDepth / 2],
@@ -46,7 +98,6 @@ function createShelfStructure() {
     shelfGroup.add(support);
   });
 
-  // Camadas de prateleira e itens
   for (let j = 0; j < 3; j++) {
     const shelfLayer = createShelfLayer(shelfWidth, shelfHeight, shelfDepth, j * shelfHeight * 2);
     shelfGroup.add(shelfLayer);
@@ -55,45 +106,39 @@ function createShelfStructure() {
   return shelfGroup;
 }
 
-// Função para criar uma camada de prateleira com itens
-function createShelfLayer(width, height, depth, yPosition) {
-  const layerGroup = new THREE.Group();
-  const layerGeometry = new THREE.BoxGeometry(width, 0.1, depth);
-  const layerMaterial = new THREE.MeshBasicMaterial({ color: 0x8B4513 });
-  const layer = new THREE.Mesh(layerGeometry, layerMaterial);
-  layer.position.y = yPosition;
-  layerGroup.add(layer);
-
-  // Adicionar itens na prateleira
-  for (let k = -1; k <= 1; k++) {
-    const item = createItem(0x00ff00);
-    item.position.set(k * 1.5, yPosition + 0.5, 0);
-    layerGroup.add(item);
+// Função para criar o armazém com várias prateleiras
+function createWarehouse() {
+  const warehouseGroup = new THREE.Group();
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const shelf = createShelfStructure();
+      shelf.position.set(col * 8 - (cols * 4), 0, row * 12 - (rows * 6));
+      warehouseGroup.add(shelf);
+    }
   }
-
-  return layerGroup;
+  return warehouseGroup;
 }
 
-// Função para criar um item de estoque com uma cor específica
-function createItem(color) {
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshBasicMaterial({ color });
-  return new THREE.Mesh(geometry, material);
+// Criação e exibição dos armazéns
+const warehouses = [];
+for (let i = 0; i < 3; i++) {
+  const warehouse = createWarehouse();
+  warehouse.visible = i === 0;
+  warehouses.push(warehouse);
+  scene.add(warehouse);
 }
 
-// Adicionar filas de prateleiras ao cenário
-const rows = 4; // Número de fileiras de prateleiras
-const cols = 4; // Número de prateleiras por fileira
-
-for (let row = 0; row < rows; row++) {
-  for (let col = 0; col < cols; col++) {
-    const shelf = createShelfStructure();
-    shelf.position.set(col * 8 - (cols * 4), 0, row * 12 - (rows * 6));
-    scene.add(shelf);
-  }
+function updateWarehouseVisibility(selectedIndex) {
+  warehouses.forEach((warehouse, index) => {
+    warehouse.visible = index === selectedIndex;
+  });
 }
 
-// Piso e paredes
+document.getElementById('warehouse-select').addEventListener('change', (event) => {
+  const selectedWarehouse = parseInt(event.target.value);
+  updateWarehouseVisibility(selectedWarehouse);
+});
+
 const floorGeometry = new THREE.PlaneGeometry(100, 100);
 const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xCCCCCC, side: THREE.DoubleSide });
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -101,17 +146,46 @@ floor.rotation.x = Math.PI / 2;
 floor.position.y = -1;
 scene.add(floor);
 
-const wallGeometry = new THREE.PlaneGeometry(100, 20);
-const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xAAAAAA });
-const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
-backWall.position.set(0, 10, -rows * 6 - 6);
-scene.add(backWall);
+// Adiciona paredes com janelas
+function addStaticWallsWithWindows() {
+  const wallHeight = 20;
+  const wallWidth = 100;
+  const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xAAAAAA });
+  const windowMaterial = new THREE.MeshBasicMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 });
+  const windowGeometry = new THREE.BoxGeometry(wallWidth / 5, wallHeight / 2, 1);
 
-// Posicionamento da Câmera
+  for (let zPos of [-50, 50]) {
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth, wallHeight), wallMaterial);
+    wall.position.set(0, wallHeight / 2, zPos);
+    scene.add(wall);
+
+    for (let i = -1; i <= 1; i++) {
+      const window = new THREE.Mesh(windowGeometry, windowMaterial);
+      window.position.set(i * (wallWidth / 3), wallHeight / 2, zPos - 0.5);
+      scene.add(window);
+    }
+  }
+
+  for (let xPos of [-50, 50]) {
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth, wallHeight), wallMaterial);
+    wall.position.set(xPos, wallHeight / 2, 0);
+    wall.rotation.y = Math.PI / 2;
+    scene.add(wall);
+
+    for (let i = -1; i <= 1; i++) {
+      const window = new THREE.Mesh(windowGeometry, windowMaterial);
+      window.position.set(xPos - 0.5, wallHeight / 2, i * (wallWidth / 3));
+      window.rotation.y = Math.PI / 2;
+      scene.add(window);
+    }
+  }
+}
+
+addStaticWallsWithWindows();
+
 camera.position.set(0, 10, 40);
 camera.lookAt(0, 5, 0);
 
-// Função de Animação
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
@@ -120,14 +194,12 @@ function animate() {
 animate();
 
 // Indicadores de Estoque
-let totalItems = rows * cols * 3; // Total de itens, considerando cada prateleira tem 3 níveis
-let lowStock = 2; // Exemplo inicial
+let totalItems = rows * cols * 3;
+let lowStock = 2;
 
-// Atualizar indicadores
 document.getElementById('total-items').innerText = `Total de Itens: ${totalItems}`;
 document.getElementById('low-stock').innerText = `Estoque Baixo: ${lowStock}`;
 
-// Configuração do Gráfico de Estoque (Chart.js)
 const ctx = document.getElementById('stock-chart').getContext('2d');
 const stockChart = new Chart(ctx, {
   type: 'bar',
@@ -171,11 +243,13 @@ function simulateStockMovement() {
   document.getElementById('total-items').innerText = `Total de Itens: ${totalItems}`;
   document.getElementById('low-stock').innerText = `Estoque Baixo: ${lowStock}`;
 
+  // Atualiza apenas os itens de estoque, ignorando janelas e outros elementos
   scene.traverse((object) => {
-    if (object.isMesh && object.geometry.type === 'BoxGeometry' && object.material.color.getHex() !== 0x8B4513) {
+    if (object.isMesh && object.userData.isStockItem) {
       const randomQty = Math.floor(Math.random() * 15) + 1;
       object.material.color.set(randomQty <= 3 ? 0xff0000 : 0x00ff00);
       object.scale.y = randomQty / 15;
+      object.userData.quantity = randomQty; // Atualiza a quantidade nos dados do item
     }
   });
 }
