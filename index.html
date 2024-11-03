@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estoque em Tempo Real</title>
+  <style>
+    body { margin: 0; display: flex; flex-direction: row; font-family: Arial, sans-serif; }
+    #dashboard { width: 300px; background: #f4f4f4; padding: 20px; }
+    #3d-container { width: calc(100% - 300px); height: 100vh; background: #e0e0e0; }
+    h2 { font-size: 1.5em; margin-bottom: 10px; }
+    .indicator { margin: 15px 0; font-size: 1.2em; }
+    .chart-container { width: 100%; height: 200px; }
+  </style>
+
+  <!-- Import Map para configurar módulos -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.155.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.155.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Dashboard Lateral -->
+  <div id="dashboard">
+    <h2>Estoque em Tempo Real</h2>
+    <div class="indicator" id="total-items">Total de Itens: 0</div>
+    <div class="indicator" id="low-stock">Estoque Baixo: 0</div>
+    <div class="chart-container">
+      <canvas id="stock-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Container 3D -->
+  <div id="3d-container"></div>
+
+  <!-- Importação do Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Importação do app.js como módulo -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
