@@ -28,12 +28,20 @@
   <!-- Dashboard Lateral -->
   <div id="dashboard">
     <h2>Estoque em Tempo Real</h2>
+    <select id="warehouse-select">
+        <option value="0">Armazém 1</option>
+        <option value="1">Armazém 2</option>
+        <option value="2">Armazém 3</option>
+    </select>
     <div class="indicator" id="total-items">Total de Itens: 0</div>
     <div class="indicator" id="low-stock">Estoque Baixo: 0</div>
+    <label for="warehouse-select">Selecionar Armazém:</label>
     <div class="chart-container">
       <canvas id="stock-chart"></canvas>
     </div>
   </div>
+
+  
 
   <!-- Container 3D -->
   <div id="3d-container"></div>
@@ -43,5 +51,10 @@
 
   <!-- Importação do app.js como módulo -->
   <script type="module" src="app.js"></script>
+  <div id="selected-item-info" style="margin-top: 20px;">
+    <h3>Informações do Item Selecionado:</h3>
+    <p id="item-info">Nenhum item selecionado</p>
+  </div>
+</div>
 </body>
 </html>
